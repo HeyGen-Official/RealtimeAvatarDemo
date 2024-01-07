@@ -12,6 +12,7 @@ if (apiKey === "YourApiKey" || SERVER_URL === "") {
 
 let sessionInfo = null;
 let peerConnection = null;
+let mediaStream = null;
 
 function updateStatus(statusElement, message) {
   statusElement.innerHTML += message + "<br>";
@@ -73,6 +74,19 @@ async function createNewSession() {
     const dataChannel = event.channel;
     dataChannel.onmessage = onMessage;
   };
+
+  navigator.mediaDevices.getUserMedia({ audio: true })
+    .then((stream) => {
+      const audioTrack = stream.getAudioTracks()[0];
+      audioTrack.enabled = false;
+      console.log("audio track",audioTrack,audioTrack.getSettings())
+      const sender = peerConnection.addTrack(audioTrack, stream);
+      mediaStream = stream;
+
+    })
+    .catch((error) => {
+      console.error('Error accessing microphone:', error);
+    });
 
   // Set server's SDP as remote description
   const remoteDescription = new RTCSessionDescription(serverSdp);
@@ -176,6 +190,9 @@ document
 document
   .querySelector("#closeBtn")
   .addEventListener("click", closeConnectionHandler);
+document
+  .querySelector("#startAudioBtn")
+  .addEventListener("click", audioInput);
 
 // new session
 async function newSession(quality, avatar_name, voice_id) {
@@ -315,4 +332,29 @@ async function stopSession(session_id) {
     const data = await response.json();
     return data.data;
   }
+}
+
+
+
+let isAudioStart=false;
+
+async function audioInput() {
+    let startAudioBtn = document.querySelector("#startAudioBtn")
+    const audioTrack = mediaStream.getAudioTracks()[0];
+    if (!isAudioStart) {
+        if (audioTrack) {
+            // Unmute the audio track
+            audioTrack.enabled = true;
+        }
+        isAudioStart = true;
+        startAudioBtn.textContent = 'Stop Audio Input';
+    } else {
+          if (audioTrack) {
+              // Mute the audio track
+              audioTrack.enabled = false;
+          }
+          isAudioStart = false;
+          startAudioBtn.textContent = 'Start Audio Input';
+
+    }
 }
